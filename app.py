@@ -26,7 +26,15 @@ def cached_endpoint(ttl=300):
         return wrapper
     return decorator
 
-
+@app.route('/')
+def home():
+    return jsonify({
+        "message": "Free Fire API is running!",
+        "endpoints": {
+            "account_info": "/api/account?uid=USER_ID&region=REGION"
+        },
+        "example": "https://your-app.vercel.app/api/account?uid=123456789&region=ar"
+    })
 
 @app.route('/api/account')
 @cached_endpoint()
@@ -48,10 +56,25 @@ def get_account_info():
         }
         return jsonify(response), 400, {'Content-Type': 'application/json; charset=utf-8'}
 
-    return_data = asyncio.run(lib2.GetAccountInformation(uid, "7", region, "/GetPlayerPersonalShow"))
-    formatted_json = json.dumps(return_data, indent=2, ensure_ascii=False)
-    return formatted_json, 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        return_data = asyncio.run(lib2.GetAccountInformation(uid, "7", region, "/GetPlayerPersonalShow"))
+        formatted_json = json.dumps(return_data, indent=2, ensure_ascii=False)
+        return formatted_json, 200, {'Content-Type': 'application/json; charset=utf-8'}
+    except Exception as e:
+        response = {
+            "error": "Internal server error",
+            "message": str(e)
+        }
+        return jsonify(response), 500, {'Content-Type': 'application/json; charset=utf-8'}
 
+# Handler for Vercel serverless functions
+@app.route('/api/<path:path>')
+def catch_all(path):
+    return jsonify({
+        "error": "Endpoint not found",
+        "available_endpoints": ["/api/account"]
+    }), 404
 
+# Vercel requires this
 if __name__ == '__main__':
-    app.run(port=3000, host='0.0.0.0', debug=True)
+    app.run(debug=True)
